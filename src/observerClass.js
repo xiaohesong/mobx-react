@@ -13,6 +13,8 @@ export function makeClassComponentObserver(componentClass) {
     const target = componentClass.prototype
     if (target.componentWillReact)
         throw new Error("The componentWillReact life-cycle event is no longer supported")
+    // 如果不是pureComponent，也不存在scu，那就给他赋值一个scu算法
+    // 如果scu存在并且不是我们赋值的这个，那就给他报错。。。
     if (componentClass.__proto__ !== PureComponent) {
         if (!target.shouldComponentUpdate) target.shouldComponentUpdate = observerSCU
         else if (target.shouldComponentUpdate !== observerSCU)
@@ -129,15 +131,24 @@ function makeObservableProp(target, propName) {
     const valueHolderKey = newSymbol(`reactProp_${propName}_valueHolder`)
     const atomHolderKey = newSymbol(`reactProp_${propName}_atomHolder`)
     function getAtom() {
+        // 如果不存在这个属性，那就定义一个。
         if (!this[atomHolderKey]) {
+            // createAtom("reactive " + propName) 返回mobx中atom的一个实例对象
+            // setHiddenProp 会根据 this是否包含atomHolderKey 来返回
+            // 如果不包含atomHolderKey，就返回当前this对象(Object.defineProperty的原因)
+            // 如果有了，那就返回只包含当前这个key的对象。
             setHiddenProp(this, atomHolderKey, createAtom("reactive " + propName))
         }
+        // 不管如何，这里都会返回atom的实例对象。
+        // 上面的代码相当于是 this[atomHolderKey] = createAtom("reactive " + propName)
         return this[atomHolderKey]
     }
     Object.defineProperty(target, propName, {
         configurable: true,
         enumerable: true,
         get: function() {
+            // reportObserved这个函数会对当前this进行报告
+            // 报告什么？mobx里去看, 你也可以猜得到。
             getAtom.call(this).reportObserved()
             return this[valueHolderKey]
         },

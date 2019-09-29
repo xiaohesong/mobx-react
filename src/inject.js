@@ -8,6 +8,7 @@ import { MobXProviderContext } from "./Provider"
  */
 function createStoreInjector(grabStoresFn, component, injectNames, makeReactive) {
     // Support forward refs
+    // 这里的grabStoreFn如果不是用户自己穿的，那么会使用grabStoresByName函数返回的那个闭包。
     let Injector = React.forwardRef((props, ref) => {
         const newProps = { ...props }
         const context = React.useContext(MobXProviderContext)
