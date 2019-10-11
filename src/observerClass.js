@@ -10,9 +10,14 @@ const skipRenderKey = newSymbol("skipRender")
 const isForcingUpdateKey = newSymbol("isForcingUpdate")
 
 export function makeClassComponentObserver(componentClass) {
+    // 获取observer的组件的原型,但不是实例化哦
+    // 所有被实例化的对象都会继承这个原型
+    // https://github.com/xiaohesong/TIL/blob/master/front-end/es6/prototype-example.md
     const target = componentClass.prototype
+    // 这个可能是以前所支持的生命周期，但是现在不支持了
     if (target.componentWillReact)
         throw new Error("The componentWillReact life-cycle event is no longer supported")
+
     // 如果不是pureComponent，也不存在scu，那就给他赋值一个scu算法
     // 如果scu存在并且不是我们赋值的这个，那就给他报错。。。
     if (componentClass.__proto__ !== PureComponent) {
@@ -28,9 +33,22 @@ export function makeClassComponentObserver(componentClass) {
     // are defined inside the component, and which rely on state or props, re-compute if state or props change
     // (otherwise the computed wouldn't update and become stale on props change, since props are not observable)
     // However, this solution is not without it's own problems: https://github.com/mobxjs/mobx-react/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3Aobservable-props-or-not+
+
+    // 这个就是让props和state为observable
     makeObservableProp(target, "props")
     makeObservableProp(target, "state")
 
+    // 对原型上的render方法进行改写
+    // 这个原型上的render方法也就是componentClass上定义的render方法
+    // 类里定义的普通函数等同于在protptype上定义
+    // class A{
+    //     state() {
+    //         return "myState"
+    //     }
+    // }
+    // 等同于下面这样：
+    // class A{}
+    // A.prototype.state = function() {return 'myState'}--
     const baseRender = target.render
     target.render = function() {
         return makeComponentReactive.call(this, baseRender)
@@ -149,6 +167,8 @@ function makeObservableProp(target, propName) {
         get: function() {
             // reportObserved这个函数会对当前this进行报告
             // 报告什么？mobx里去看, 你也可以猜得到。
+            // 这里的reportObserved是atom实例下的reportObserved方法, 这个this就是target对象。
+            // 注意：atom实例里的reportObserved内的this就是atom实例哦。
             getAtom.call(this).reportObserved()
             return this[valueHolderKey]
         },
