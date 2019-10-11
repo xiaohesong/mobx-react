@@ -62,6 +62,7 @@ export function makeClassComponentObserver(componentClass) {
 }
 
 function makeComponentReactive(render) {
+    // 此处的this就是target
     if (isUsingStaticRendering() === true) return render.call(this)
 
     /**
@@ -148,6 +149,7 @@ function observerSCU(nextProps, nextState) {
 function makeObservableProp(target, propName) {
     const valueHolderKey = newSymbol(`reactProp_${propName}_valueHolder`)
     const atomHolderKey = newSymbol(`reactProp_${propName}_atomHolder`)
+    // getAtom返回atom的实例
     function getAtom() {
         // 如果不存在这个属性，那就定义一个。
         if (!this[atomHolderKey]) {
@@ -161,6 +163,7 @@ function makeObservableProp(target, propName) {
         // 上面的代码相当于是 this[atomHolderKey] = createAtom("reactive " + propName)
         return this[atomHolderKey]
     }
+    // 下面的get/set 不调用是不会调用内部的代码的
     Object.defineProperty(target, propName, {
         configurable: true,
         enumerable: true,
